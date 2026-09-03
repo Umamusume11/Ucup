@@ -571,3 +571,286 @@
 
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ucup ofs - Community Beatmaps Dashboard</title>
+    <!-- Include Supabase CDN Library -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --panel-bg: #150a19;
+            --pink-osu: #ff69b4;
+            --cyan-diva: #00e6c8;
+            --text-color: #ffffff;
+            --error-color: #ff3232;
+            --success-color: #32ff32;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: var(--pink-osu);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            margin: 30px auto;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 2px solid #251530;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--cyan-diva);
+            border-bottom: 1px solid #351a45;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            background-color: #1a1a26;
+            border: 2px solid #351a45;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--pink-osu);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a0f24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #351a45;
+        }
+
+        .song-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .song-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .download-btn {
+            background-color: transparent;
+            border: 2px solid var(--cyan-diva);
+            color: var(--cyan-diva);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .download-btn:hover {
+            background-color: var(--cyan-diva);
+            color: var(--bg-color);
+        }
+
+        .top-download-box { text-align: center; margin-bottom: 20px; }
+        .web-download-link {
+            display: inline-block; color: var(--pink-osu); font-weight: bold; text-decoration: none;
+            font-size: 1.1rem; border: 2px dashed var(--pink-osu); padding: 10px 20px; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>UCUP OFS</h1>
+        <p class="subtitle">Community Song Creator Dashboard</p>
+    </header>
+
+    <div class="container">
+        
+        <div class="top-download-box">
+            <a href="https://github.com" target="_blank" class="web-download-link">
+                ➔ Web download here (Get Game .EXE)
+            </a>
+        </div>
+
+        <!-- PANEL FORMULIR: MEMBUAT DAN MEMASUKKAN LAGU BARU -->
+        <div class="panel">
+            <h2>🎵 Create & Submit New Beatmap</h2>
+            <div class="form-group">
+                <label>Song Title</label>
+                <input type="text" id="mapTitle" placeholder="e.g. My Awesome Song Remix" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>BPM (Beats Per Minute)</label>
+                <input type="number" id="mapBpm" placeholder="e.g. 140">
+            </div>
+            <div class="form-group">
+                <label>Difficulty</label>
+                <select id="mapDiff">
+                    <option value="★☆☆☆☆ (Easy)">Easy</option>
+                    <option value="★★★☆☆ (Normal)">Normal</option>
+                    <option value="★★★★★ (Expert)">Expert</option>
+                </select>
+            </div>
+            <button onclick="submitNewBeatmap()">Submit Beatmap to Web List</button>
+        </div>
+
+        <!-- PANEL UTAMA: DAFTAR LAGU YANG OTOMATIS BERTAHUN DARI DATABASE -->
+        <div class="panel">
+            <h2>🌍 Live Community Beatmaps List</h2>
+            <div id="liveSongList" class="song-list">
+                <p style="color: #aaa; text-align: center;">Loading server beatmaps...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // CONFIG SUPABASE: Ganti dengan URL dan KEY Proyek Supabase Anda sendiri nanti!
+        const SUPABASE_URL = "https://XYZ_ANDA.supabase.co"; 
+        const SUPABASE_ANON_KEY = "TOKEN_ANON_KEY_PROYEK_ANDA";
+        
+        const supabase = sysSupabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Fungsi Memuat Data dari Database ke Web Secara Otomatis
+        async function fetchLiveBeatmaps() {
+            const songListDiv = document.getElementById('liveSongList');
+            
+            // Mengambil baris data dari tabel bernama 'beatmaps'
+            let { data: beatmaps, error } = await supabase.from('beatmaps').select('*').order('id', { ascending: false });
+            
+            if (error) {
+                songListDiv.innerHTML = "<p style='color:red;'>Failed to load live data from database.</p>";
+                return;
+            }
+
+            if (beatmaps.length === 0) {
+                songListDiv.innerHTML = "<p style='color:#aaa; text-align:center;'>No custom maps submitted yet. Be the first!</p>";
+                return;
+            }
+
+            songListDiv.innerHTML = ""; // Bersihkan teks loading
+            beatmaps.forEach(map => {
+                const item = document.createElement('div');
+                item.className = 'song-item';
+                item.innerHTML = `
+                    <div class="song-info">
+                        <h3>${map.title}</h3>
+                        <p>Format: video.mp4 | BPM: ${map.bpm} | Difficulty: ${map.difficulty}</p>
+                    </div>
+                    <a href="https://github.com" target="_blank" class="download-btn">Download Map</a>
+                `;
+                songListDiv.appendChild(item);
+            });
+        }
+
+        // Fungsi Menambahkan Lagu Baru ke Database Saat Tombol Diklik
+        async function submitNewBeatmap() {
+            const title = document.getElementById('mapTitle').value.trim();
+            const bpm = document.getElementById('mapBpm').value;
+            const difficulty = document.getElementById('mapDiff').value;
+
+            if (!title || !bpm) {
+                alert("Please fill all the form boxes!");
+                return;
+            }
+
+            // Memasukkan baris data baru ke cloud database Supabase
+            const { error } = await supabase.from('beatmaps').insert([{ title, bpm: parseInt(bpm), difficulty }]);
+
+            if (error) {
+                alert("Database Submission Error: " + error.message);
+            } else {
+                alert("✓ Success! Your beatmap has been added online to the live website grid.");
+                // Reset form input
+                document.getElementById('mapTitle').value = "";
+                document.getElementById('mapBpm').value = "";
+                // Segarkan ulang daftar web agar langsung muncul
+                fetchLiveBeatmaps();
+            }
+        }
+
+        // Jalankan pemuatan otomatis saat web pertama kali dibuka
+        fetchLiveBeatmaps();
+    </script>
+</body>
+</html>
+
+                
