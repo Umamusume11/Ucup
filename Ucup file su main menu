@@ -1,0 +1,226 @@
+import pygame
+import random
+import sys
+import math
+
+# Initialize Pygame
+pygame.init()
+
+# Game Setup
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Ucup ofs")
+clock = pygame.time.Clock()
+
+# Colors
+BACKGROUND = (10, 10, 15)
+MENU_BG = (15, 10, 25)
+CIRCLE_COLOR = (255, 105, 180) # Pink
+APPROACH_COLOR = (255, 255, 255) # White
+TEXT_COLOR = (255, 255, 255)
+ACCENT_COLOR = (0, 255, 200) # Cyan
+
+# Game Variables
+score = 0
+combo = 0
+game_state = "MENU" # States: "MENU", "PLAYING", "SETTINGS"
+
+# Editable Settings (Default values)
+circle_radius = 40       # Can be 30 (Small), 40 (Medium), 50 (Large)
+approach_speed = 0.05    # Can be 0.03 (Slow), 0.05 (Normal), 0.08 (Fast)
+bg_dim = 1.0             # Brightness multiplier for gameplay background (0.2 to 1.0)
+
+# Fonts
+title_font = pygame.font.SysFont("Arial", 64, bold=True)
+font = pygame.font.SysFont("Arial", 24)
+sub_font = pygame.font.SysFont("Arial", 18)
+
+# Hit Circle Class
+class HitCircle:
+    def __init__(self):
+        self.x = random.randint(100, SCREEN_WIDTH - 100)
+        self.y = random.randint(100, SCREEN_HEIGHT - 100)
+        self.radius = circle_radius
+        self.approach_scale = 3.0
+        self.approach_speed = approach_speed
+        self.alive = True
+
+    def update(self):
+        self.approach_scale -= self.approach_speed
+        if self.approach_scale <= 1.0:
+            self.alive = False
+            return False
+        return True
+
+    def draw(self, surface):
+        if not self.alive:
+            return
+        current_approach_radius = int(self.radius * self.approach_scale)
+        pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), current_approach_radius, 2)
+        pygame.draw.circle(surface, CIRCLE_COLOR, (self.x, self.y), self.radius)
+
+    def check_click(self, mouse_pos):
+        distance = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+        if distance <= self.radius:
+            if 1.0 <= self.approach_scale <= 1.5:
+                return "HIT"
+            else:
+                return "BAD_TIMING"
+        return "MISS"
+
+# Setup game entities
+circles = []
+spawn_timer = 0
+spawn_rate = 60
+flash_timer = 0 
+
+# Main Game Loop
+running = True
+while running:
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # --- 1. STATE: MAIN MENU ---
+    if game_state == "MENU":
+        screen.fill(MENU_BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN: 
+                    score = 0
+                    combo = 0
+                    circles.clear()
+                    game_state = "PLAYING"
+                elif event.key == pygame.K_s: # Press S to go to Settings
+                    game_state = "SETTINGS"
+
+        title_text = title_font.render("UCUP OFS", True, CIRCLE_COLOR)
+        desc_text = font.render("A Minimalist Rhythm Game Prototype", True, TEXT_COLOR)
+        
+        flash_timer += 1
+        if (flash_timer // 30) % 2 == 0:
+            start_text = font.render("PRESS ENTER TO PLAY", True, ACCENT_COLOR)
+        else:
+            start_text = font.render("", True, ACCENT_COLOR)
+            
+        settings_hint = font.render("PRESS [S] FOR SETTINGS", True, TEXT_COLOR)
+        how_to_text = sub_font.render("How to play: Click the pink circles when the white ring matches their size!", True, TEXT_COLOR)
+
+        screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 120))
+        screen.blit(desc_text, (SCREEN_WIDTH // 2 - desc_text.get_width() // 2, 210))
+        screen.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, 340))
+        screen.blit(settings_hint, (SCREEN_WIDTH // 2 - settings_hint.get_width() // 2, 400))
+        screen.blit(how_to_text, (SCREEN_WIDTH // 2 - how_to_text.get_width() // 2, 520))
+
+    # --- 2. STATE: SETTINGS MENU ---
+    elif game_state == "SETTINGS":
+        screen.fill(MENU_BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE or event.key == pygame.K_s: # Return to menu
+                    game_state = "MENU"
+                
+                # [1] Toggle Circle Size
+                elif event.key == pygame.K_1:
+                    if circle_radius == 40: circle_radius = 50
+                    elif circle_radius == 50: circle_radius = 30
+                    else: circle_radius = 40
+                
+                # [2] Toggle Approach Speed
+                elif event.key == pygame.K_2:
+                    if approach_speed == 0.05: approach_speed = 0.08
+                    elif approach_speed == 0.08: approach_speed = 0.03
+                    else: approach_speed = 0.05
+                
+                # [3] Toggle Background Dim
+                elif event.key == pygame.K_3:
+                    if bg_dim == 1.0: bg_dim = 0.5
+                    elif bg_dim == 0.5: bg_dim = 0.2
+                    else: bg_dim = 1.0
+
+        # Text mapping for settings display
+        size_label = "Medium" if circle_radius == 40 else ("Large" if circle_radius == 50 else "Small")
+        speed_label = "Normal" if approach_speed == 0.05 else ("Fast" if approach_speed == 0.08 else "Slow")
+        dim_label = "100% (Bright)" if bg_dim == 1.0 else ("50% (Dim)" if bg_dim == 0.5 else "20% (Dark)")
+
+        # Render Settings Text
+        set_title = title_font.render("SETTINGS", True, ACCENT_COLOR)
+        opt1 = font.render(f"[1] Circle Size: {size_label}", True, TEXT_COLOR)
+        opt2 = font.render(f"[2] Approach Speed: {speed_label}", True, TEXT_COLOR)
+        opt3 = font.render(f"[3] Background Dim: {dim_label}", True, TEXT_COLOR)
+        back_text = sub_font.render("Press ESC or S to Save & Return", True, CIRCLE_COLOR)
+
+        screen.blit(set_title, (SCREEN_WIDTH // 2 - set_title.get_width() // 2, 100))
+        screen.blit(opt1, (150, 240))
+        screen.blit(opt2, (150, 300))
+        screen.blit(opt3, (150, 360))
+        screen.blit(back_text, (SCREEN_WIDTH // 2 - back_text.get_width() // 2, 480))
+
+    # --- 3. STATE: PLAYING ---
+    elif game_state == "PLAYING":
+        # Apply background dim setting dynamically
+        current_bg = (int(BACKGROUND[0] * bg_dim), int(BACKGROUND[1] * bg_dim), int(BACKGROUND[2] * bg_dim))
+        screen.fill(current_bg)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE: 
+                    game_state = "MENU"
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: 
+                    clicked_circle = False
+                    for circle in circles:
+                        result = circle.check_click(mouse_pos)
+                        if result == "HIT":
+                            score += 300 * (combo + 1)
+                            combo += 1
+                            circle.alive = False
+                            clicked_circle = True
+                            break
+                        elif result == "BAD_TIMING":
+                            score += 50
+                            combo = 0
+                            circle.alive = False
+                            clicked_circle = True
+                            break
+                    if not clicked_circle:
+                        combo = 0
+
+        # Spawn gameplay circles
+        spawn_timer += 1
+        if spawn_timer >= spawn_rate:
+            circles.append(HitCircle())
+            spawn_timer = 0
+
+        # Update and Draw circles
+        for circle in circles[:]:
+            if not circle.update() or not circle.alive:
+                if not circle.alive and circle.approach_scale <= 1.0:
+                    combo = 0 
+                circles.remove(circle)
+            else:
+                circle.draw(screen)
+
+        # Draw HUD UI
+        score_text = font.render(f"Score: {score}", True, TEXT_COLOR)
+        combo_text = font.render(f"Combo: {combo}x", True, TEXT_COLOR)
+        esc_text = sub_font.render("Press ESC for Menu", True, TEXT_COLOR)
+        
+        screen.blit(score_text, (20, 20))
+        screen.blit(combo_text, (20, 50))
+        screen.blit(esc_text, (SCREEN_WIDTH - 160, 20))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
+
+
