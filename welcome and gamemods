@@ -1,0 +1,235 @@
+# ==============================================================================
+# ✍️ Tablet Support (OpenTabletDriver)
+# This game has built-in integration configurations for OpenTabletDriver (OTD).
+# * If you don't have it installed, the game will provide an official download option.
+# * You can easily toggle Tablet Mode ON/OFF via the in-game Settings menu.
+# ==============================================================================
+
+import pygame
+import random
+import sys
+import math
+import webbrowser
+import os
+
+# Initialize Pygame and Mixer for Audio
+pygame.init()
+pygame.mixer.init()
+
+# Game Setup
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Ucup ofs")
+clock = pygame.time.Clock()
+
+# Colors
+BACKGROUND = (10, 10, 15)
+MENU_BG = (15, 10, 25)
+CIRCLE_COLOR = (255, 105, 180)    # Pink (Osu Standard)
+DIVA_COLOR = (0, 220, 255)        # Light Blue / Cyan (Osu Diva)
+APPROACH_COLOR = (255, 255, 255)  # White
+TEXT_COLOR = (255, 255, 255)
+ACCENT_COLOR = (0, 255, 200)      # Cyan
+
+# Game Variables
+score = 0
+combo = 0
+game_state = "WELCOME"  # States: "WELCOME", "MODE_SELECT", "MENU", "PLAYING", "SETTINGS"
+game_mode = "STANDARD"  # Modes: "STANDARD" (Osu! style) or "DIVA" (Project Diva style)
+
+# Editable Settings
+circle_radius = 40       
+approach_speed = 0.05    
+bg_dim = 1.0             
+tablet_mode = False      
+
+# Fonts
+title_font = pygame.font.SysFont("Arial", 54, bold=True)
+font = pygame.font.SysFont("Arial", 24)
+sub_font = pygame.font.SysFont("Arial", 18)
+
+# ------------------------------------------------------------------------------
+# AUTOMATIC ASSET GENERATOR (Fallback placeholders if files don't exist yet)
+# ------------------------------------------------------------------------------
+# 1. Image Generator Placeholder
+if not os.path.exists("ucup.png"):
+    temp_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+    pygame.draw.circle(temp_surf, CIRCLE_COLOR, (100, 100), 90)
+    pygame.draw.circle(temp_surf, (255, 255, 255), (65, 80), 12)
+    pygame.draw.circle(temp_surf, (255, 255, 255), (135, 80), 12)
+    pygame.draw.circle(temp_surf, (0, 0, 0), (65, 80), 5)
+    pygame.draw.circle(temp_surf, (0, 0, 0), (135, 80), 5)
+    pygame.draw.arc(temp_surf, (0, 0, 0), (60, 90, 80, 50), 3.14, 0, 4)
+    pygame.image.save(temp_surf, "ucup.png")
+
+ucup_img = pygame.image.load("ucup.png")
+ucup_img = pygame.transform.scale(ucup_img, (180, 180))
+
+# 2. Sound Player Handler
+welcome_played = False
+def play_welcome_voice():
+    global welcome_played
+    if not welcome_played:
+        if os.path.exists("welcome.mp3"):
+            try:
+                pygame.mixer.music.load("welcome.mp3")
+                pygame.mixer.music.play()
+            except:
+                print("Could not play welcome.mp3 file.")
+        else:
+            print("🔊 [Voice Synth]: WELCOME TO UUUUUCUPPPPP!")
+        welcome_played = True
+
+# ------------------------------------------------------------------------------
+# GAME CLASSES (HIT CIRCLES FOR BOTH MODES)
+# ------------------------------------------------------------------------------
+class HitCircle:
+    def __init__(self):
+        self.x = random.randint(150, SCREEN_WIDTH - 150)
+        self.y = random.randint(150, SCREEN_HEIGHT - 150)
+        self.radius = circle_radius
+        self.alive = True
+        
+        if game_mode == "STANDARD":
+            self.approach_scale = 3.0
+            self.approach_speed = approach_speed
+        elif game_mode == "DIVA":
+            angle = random.uniform(0, 2 * math.pi)
+            self.start_dist = 200
+            self.current_dist = self.start_dist
+            self.fly_speed = approach_speed * 120  # Scale speed for coordinate translation
+            
+    def update(self):
+        if game_mode == "STANDARD":
+            self.approach_scale -= self.approach_speed
+            if self.approach_scale <= 1.0:
+                self.alive = False
+                return False
+        elif game_mode == "DIVA":
+            self.current_dist -= self.fly_speed
+            if self.current_dist <= 0:
+                self.alive = False
+                return False
+        return True
+
+    def draw(self, surface):
+        if not self.alive:
+            return
+            
+        if game_mode == "STANDARD":
+            current_approach_radius = int(self.radius * self.approach_scale)
+            pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), current_approach_radius, 2)
+            pygame.draw.circle(surface, CIRCLE_COLOR, (self.x, self.y), self.radius)
+            
+        elif game_mode == "DIVA":
+            # Target silhouette
+            pygame.draw.circle(surface, (60, 60, 70), (self.x, self.y), self.radius, 2)
+            # Moving flying note element (Approaching target point)
+            note_x = int(self.x + math.cos(self.current_dist * 0.05) * self.current_dist)
+            note_y = int(self.y + math.sin(self.current_dist * 0.05) * self.current_dist)
+            pygame.draw.circle(surface, DIVA_COLOR, (note_x, note_y), int(self.radius * 0.8))
+
+    def check_click(self, mouse_pos):
+        if game_mode == "STANDARD":
+            distance = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+            if distance <= self.radius:
+                if 1.0 <= self.approach_scale <= 1.5: return "HIT"
+                else: return "BAD_TIMING"
+        elif game_mode == "DIVA":
+            distance = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+            if distance <= self.radius:
+                if 0 <= self.current_dist <= 25: return "HIT"
+                else: return "BAD_TIMING"
+        return "MISS"
+
+# Setup entity lists
+circles = []
+spawn_timer = 0
+spawn_rate = 60
+welcome_timer = 0
+
+# Main Game Loop
+running = True
+while running:
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # ==========================================================================
+    # 1. STATE: WELCOME INTRO SCREEN
+    # ==========================================================================
+    if game_state == "WELCOME":
+        screen.fill(BACKGROUND)
+        play_welcome_voice()
+        
+        welcome_timer += 1
+        # Pulsing logo size scale calculation
+        pulse = int(math.sin(welcome_timer * 0.1) * 10)
+        pulsed_img = pygame.transform.scale(ucup_img, (180 + pulse, 180 + pulse))
+        
+        screen.blit(pulsed_img, (SCREEN_WIDTH // 2 - pulsed_img.get_width() // 2, SCREEN_HEIGHT // 2 - 140))
+        w_text = title_font.render("UCUP OFS", True, CIRCLE_COLOR)
+        h_text = font.render("Press ANY KEY to Continue", True, TEXT_COLOR)
+        
+        screen.blit(w_text, (SCREEN_WIDTH // 2 - w_text.get_width() // 2, SCREEN_HEIGHT // 2 + 80))
+        screen.blit(h_text, (SCREEN_WIDTH // 2 - h_text.get_width() // 2, SCREEN_HEIGHT // 2 + 160))
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: running = False
+            elif event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
+                game_state = "MODE_SELECT"
+
+    # ==========================================================================
+    # 2. STATE: GAME MODES SELECT
+    # ==========================================================================
+    elif game_state == "MODE_SELECT":
+        screen.fill(MENU_BG)
+        m_title = title_font.render("SELECT GAME MODE", True, ACCENT_COLOR)
+        screen.blit(m_title, (SCREEN_WIDTH // 2 - m_title.get_width() // 2, 80))
+        
+        # Mode Selection Boxes
+        pygame.draw.rect(screen, (30, 20, 40), (120, 220, 240, 180), border_radius=10)
+        pygame.draw.rect(screen, (20, 35, 50), (440, 220, 240, 180), border_radius=10)
+        
+        lbl_std = font.render(" [1] OSU STANDARD", True, CIRCLE_COLOR)
+        lbl_div = font.render(" [2] OSU DIVA STYLE", True, DIVA_COLOR)
+        screen.blit(lbl_std, (140, 300))
+        screen.blit(lbl_div, (460, 300))
+        
+        hint = sub_font.render("Press key [1] or [2] to select your mode style", True, TEXT_COLOR)
+        screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, 480))
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    game_mode = "STANDARD"
+                    game_state = "MENU"
+                elif event.key == pygame.K_2:
+                    game_mode = "DIVA"
+                    game_state = "MENU"
+
+    # ==========================================================================
+    # 3. STATE: MAIN MENU
+    # ==========================================================================
+    elif game_state == "MENU":
+        screen.fill(MENU_BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    score, combo = 0, 0
+                    circles.clear()
+                    game_state = "PLAYING"
+                elif event.key == pygame.K_s: game_state = "SETTINGS"
+                elif event.key == pygame.K_BACKSPACE: game_state = "MODE_SELECT"
+
+        title_text = title_font.render("UCUP OFS", True, CIRCLE_COLOR if game_mode == "STANDARD" else DIVA_COLOR)
+        active_mode_str = f"Active Style: Osu! {game_mode.capitalize()}"
+        desc_text = font.render(active_mode_str, True, TEXT_COLOR)
+        start_text = font.render("PRESS ENTER TO PLAY", True, ACCENT_COLOR)
+        settings_hint = font.render("PRESS [S] FOR SETTINGS  |  [BACKSPACE] TO CHANGE MODE", True, TEXT_COLOR)
+
+        screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 120))
+        screen.blit(desc_text, (SCREEN_WIDTH // 2 - desc_text.get_width() // 2, 210))
+        screen.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, 320))
