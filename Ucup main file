@@ -1,0 +1,373 @@
+import pygame
+import random
+import sys
+import math
+
+# Initialize Pygame
+pygame.init()
+
+# Game Setup
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Ucup - Mini Osu! Clone")
+clock = pygame.time.Clock()
+
+# Colors
+BACKGROUND = (10, 10, 15)
+CIRCLE_COLOR = (255, 105, 180) # Pink
+APPROACH_COLOR = (255, 255, 255) # White
+TEXT_COLOR = (255, 255, 255)
+
+# Game Variables
+score = 0
+combo = 0
+font = pygame.font.SysFont("Arial", 24)
+
+# Hit Circle Class
+class HitCircle:
+    def __init__(self):
+        self.x = random.randint(100, SCREEN_WIDTH - 100)
+        self.y = random.randint(100, SCREEN_HEIGHT - 100)
+        self.radius = 40
+        self.approach_scale = 3.0 # Starts 3x bigger
+        self.approach_speed = 0.05 # How fast the ring shrinks
+        self.alive = True
+
+    def update(self):
+        # Shrink the approach circle
+        self.approach_scale -= self.approach_speed
+        if self.approach_scale <= 1.0:
+            # Player missed the timing window
+            self.alive = False
+            return False
+        return True
+
+    def draw(self, surface):
+        if not self.alive:
+            return
+        # Draw approach circle (outer ring)
+        current_approach_radius = int(self.radius * self.approach_scale)
+        pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), current_approach_radius, 2)
+        # Draw hit circle (inner target)
+        pygame.draw.circle(surface, CIRCLE_COLOR, (self.x, self.y), self.radius)
+
+    def check_click(self, mouse_pos):
+        # Calculate distance between mouse and circle center
+        distance = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+        if distance <= self.radius:
+            # Perfect timing is when approach_scale is closest to 1.0
+            if 1.0 <= self.approach_scale <= 1.5:
+                return "HIT"
+            else:
+                return "BAD_TIMING"
+        return "MISS"
+
+# Manage circles
+circles = []
+spawn_timer = 0
+spawn_rate = 60 # Spawn every 60 frames (~1 second)
+
+# Main Game Loop
+running = True
+while running:
+    screen.fill(BACKGROUND)
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # Event Handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1: # Left click
+                clicked_circle = False
+                for circle in circles:
+                    result = circle.check_click(mouse_pos)
+                    if result == "HIT":
+                        score += 300 * (combo + 1)
+                        combo += 1
+                        circle.alive = False
+                        clicked_circle = True
+                        break
+                    elif result == "BAD_TIMING":
+                        score += 50
+                        combo = 0
+                        circle.alive = False
+                        clicked_circle = True
+                        break
+                if not clicked_circle:
+                    combo = 0 # Missed completely
+
+    # Spawn circles
+    spawn_timer += 1
+    if spawn_timer >= spawn_rate:
+        circles.append(HitCircle())
+        spawn_timer = 0
+
+    # Update and Draw circles
+    for circle in circles[:]:
+        if not circle.update() or not circle.alive:
+            if not circle.alive and circle.approach_scale <= 1.0:
+                combo = 0 # Reset combo on timeout miss
+            circles.remove(circle)
+        else:
+            circle.draw(screen)
+
+    # UI text
+    score_text = font.render(f"Score: {score}", True, TEXT_COLOR)
+    combo_text = font.render(f"Combo: {combo}x", True, TEXT_COLOR)
+    screen.blit(score_text, (20, 20))
+    screen.blit(combo_text, (20, 50))
+
+    pygame.display.flip()
+    clock.tick(60) # 60 FPS
+
+pygame.quit()
+sys.exit()
+# ==============================================================================
+# ✍️ Tablet Support (OpenTabletDriver)
+# This game has built-in integration configurations for OpenTabletDriver (OTD).
+# * If you don't have it installed, the game will provide an official download option.
+# * You can easily toggle Tablet Mode ON/OFF via the in-game Settings menu.
+# ==============================================================================
+
+import pygame
+import random
+import sys
+import math
+import webbrowser  # Used to direct players to the official OpenTabletDriver download
+
+# Initialize Pygame
+pygame.init()
+
+# Game Setup
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Ucup ofs")
+clock = pygame.time.Clock()
+
+# Colors
+BACKGROUND = (10, 10, 15)
+MENU_BG = (15, 10, 25)
+CIRCLE_COLOR = (255, 105, 180) # Pink
+APPROACH_COLOR = (255, 255, 255) # White
+TEXT_COLOR = (255, 255, 255)
+ACCENT_COLOR = (0, 255, 200) # Cyan
+
+# Game Variables
+score = 0
+combo = 0
+game_state = "MENU" # States: "MENU", "PLAYING", "SETTINGS"
+
+# Editable Settings (Default values)
+circle_radius = 40       
+approach_speed = 0.05    
+bg_dim = 1.0             
+tablet_mode = False      # Tablet Mode (OTD) Toggle: False (OFF) / True (ON)
+
+# Fonts
+title_font = pygame.font.SysFont("Arial", 64, bold=True)
+font = pygame.font.SysFont("Arial", 24)
+sub_font = pygame.font.SysFont("Arial", 18)
+
+# Hit Circle Class
+class HitCircle:
+    def __init__(self):
+        self.x = random.randint(100, SCREEN_WIDTH - 100)
+        self.y = random.randint(100, SCREEN_HEIGHT - 100)
+        self.radius = circle_radius
+        self.approach_scale = 3.0
+        self.approach_speed = approach_speed
+        self.alive = True
+
+    def update(self):
+        self.approach_scale -= self.approach_speed
+        if self.approach_scale <= 1.0:
+            self.alive = False
+            return False
+        return True
+
+    def draw(self, surface):
+        if not self.alive:
+            return
+        current_approach_radius = int(self.radius * self.approach_scale)
+        pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), current_approach_radius, 2)
+        pygame.draw.circle(surface, CIRCLE_COLOR, (self.x, self.y), self.radius)
+
+    def check_click(self, mouse_pos):
+        distance = math.hypot(self.x - mouse_pos, self.y - mouse_pos)
+        if distance <= self.radius:
+            if 1.0 <= self.approach_scale <= 1.5:
+                return "HIT"
+            else:
+                return "BAD_TIMING"
+        return "MISS"
+
+# Setup game entities
+circles = []
+spawn_timer = 0
+spawn_rate = 60
+flash_timer = 0 
+
+# Main Game Loop
+running = True
+while running:
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # --- 1. STATE: MAIN MENU ---
+    if game_state == "MENU":
+        screen.fill(MENU_BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN: 
+                    score = 0
+                    combo = 0
+                    circles.clear()
+                    game_state = "PLAYING"
+                elif event.key == pygame.K_s: 
+                    game_state = "SETTINGS"
+
+        title_text = title_font.render("UCUP OFS", True, CIRCLE_COLOR)
+        desc_text = font.render("A Minimalist Rhythm Game Prototype", True, TEXT_COLOR)
+        
+        flash_timer += 1
+        if (flash_timer // 30) % 2 == 0:
+            start_text = font.render("PRESS ENTER TO PLAY", True, ACCENT_COLOR)
+        else:
+            start_text = font.render("", True, ACCENT_COLOR)
+            
+        settings_hint = font.render("PRESS [S] FOR SETTINGS", True, TEXT_COLOR)
+        
+        # Display active OTD badge on main menu if enabled
+        otd_status_str = "Tablet Mode: ACTIVE" if tablet_mode else "Input: Standard Mouse"
+        otd_badge = sub_font.render(otd_status_str, True, ACCENT_COLOR if tablet_mode else TEXT_COLOR)
+
+        screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 120))
+        screen.blit(desc_text, (SCREEN_WIDTH // 2 - desc_text.get_width() // 2, 210))
+        screen.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, 320))
+        screen.blit(settings_hint, (SCREEN_WIDTH // 2 - settings_hint.get_width() // 2, 380))
+        screen.blit(otd_badge, (SCREEN_WIDTH // 2 - otd_badge.get_width() // 2, 440))
+
+    # --- 2. STATE: SETTINGS MENU ---
+    elif game_state == "SETTINGS":
+        screen.fill(MENU_BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE or event.key == pygame.K_s: 
+                    game_state = "MENU"
+                
+                # Toggle Circle Size
+                elif event.key == pygame.K_1:
+                    if circle_radius == 40: circle_radius = 50
+                    elif circle_radius == 50: circle_radius = 30
+                    else: circle_radius = 40
+                
+                # Toggle Approach Speed
+                elif event.key == pygame.K_2:
+                    if approach_speed == 0.05: approach_speed = 0.08
+                    elif approach_speed == 0.08: approach_speed = 0.03
+                    else: approach_speed = 0.05
+                
+                # Toggle Background Dim
+                elif event.key == pygame.K_3:
+                    if bg_dim == 1.0: bg_dim = 0.5
+                    elif bg_dim == 0.5: bg_dim = 0.2
+                    else: bg_dim = 1.0
+                
+                # Toggle Tablet Mode (OpenTabletDriver)
+                elif event.key == pygame.K_4:
+                    tablet_mode = not tablet_mode
+                    if tablet_mode:
+                        webbrowser.open("https://github.com")
+
+        # Text mapping for settings display
+        size_label = "Medium" if circle_radius == 40 else ("Large" if circle_radius == 50 else "Small")
+        speed_label = "Normal" if approach_speed == 0.05 else ("Fast" if approach_speed == 0.08 else "Slow")
+        dim_label = "100%" if bg_dim == 1.0 else ("50%" if bg_dim == 0.5 else "20%")
+        tablet_label = "ON (OpenTabletDriver Page Opened)" if tablet_mode else "OFF (Mouse Only)"
+
+        # Render Settings Text
+        set_title = title_font.render("SETTINGS", True, ACCENT_COLOR)
+        opt1 = font.render(f" Circle Size: {size_label}", True, TEXT_COLOR)
+        opt2 = font.render(f" Approach Speed: {speed_label}", True, TEXT_COLOR)
+        opt3 = font.render(f" Background Dim: {dim_label}", True, TEXT_COLOR)
+        opt4 = font.render(f" OTD Tablet Mode: {tablet_label}", True, CIRCLE_COLOR if tablet_mode else TEXT_COLOR)
+        back_text = sub_font.render("Press ESC or S to Save & Return", True, ACCENT_COLOR)
+
+        screen.blit(set_title, (SCREEN_WIDTH // 2 - set_title.get_width() // 2, 80))
+        screen.blit(opt1, (120, 200))
+        screen.blit(opt2, (120, 260))
+        screen.blit(opt3, (120, 320))
+        screen.blit(opt4, (120, 380))
+        screen.blit(back_text, (SCREEN_WIDTH // 2 - back_text.get_width() // 2, 500))
+
+    # --- 3. STATE: PLAYING ---
+    elif game_state == "PLAYING":
+        current_bg = (int(10 * bg_dim), int(10 * bg_dim), int(15 * bg_dim))
+        screen.fill(current_bg)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE: 
+                    game_state = "MENU"
+            
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: 
+                    clicked_circle = False
+                    for circle in circles:
+                        result = circle.check_click(mouse_pos)
+                        if result == "HIT":
+                            score += 300 * (combo + 1)
+                            combo += 1
+                            circle.alive = False
+                            clicked_circle = True
+                            break
+                        elif result == "BAD_TIMING":
+                            score += 50
+                            combo = 0
+                            circle.alive = False
+                            clicked_circle = True
+                            break
+                    if not clicked_circle:
+                        combo = 0
+
+        # Spawn gameplay circles
+        spawn_timer += 1
+        if spawn_timer >= spawn_rate:
+            circles.append(HitCircle())
+            spawn_timer = 0
+
+        # Update and Draw circles
+        for circle in circles[:]:
+            if not circle.update() or not circle.alive:
+                if not circle.alive and circle.approach_scale <= 1.0:
+                    combo = 0 
+                circles.remove(circle)
+            else:
+                circle.draw(screen)
+
+        # Draw HUD UI
+        score_text = font.render(f"Score: {score}", True, TEXT_COLOR)
+        combo_text = font.render(f"Combo: {combo}x", True, TEXT_COLOR)
+        mode_text = sub_font.render("TABLET MODE" if tablet_mode else "MOUSE MODE", True, ACCENT_COLOR if tablet_mode else TEXT_COLOR)
+        
+        screen.blit(score_text, (20, 20))
+        screen.blit(combo_text, (20, 50))
+        screen.blit(mode_text, (SCREEN_WIDTH - 150, 20))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
+
