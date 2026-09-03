@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ucup ofs - Official Website</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --panel-bg: #150a19;
+            --pink-osu: #ff69b4;
+            --cyan-diva: #00e6c8;
+            --text-color: #ffffff;
+            --error-color: #ff3232;
+            --success-color: #32ff32;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: var(--pink-osu);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 30px auto;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 2px solid #251530;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--cyan-diva);
+            border-bottom: 1px solid #351a45;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            background-color: #1a1a26;
+            border: 2px solid #351a45;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--cyan-diva);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--pink-osu);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .status.error {
+            background-color: rgba(255, 50, 50, 0.15);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+            display: block;
+        }
+
+        .status.success {
+            background-color: rgba(50, 255, 50, 0.15);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+            display: block;
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #251530;
+        }
+
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank-badge {
+            font-weight: bold;
+            color: var(--pink-osu);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>UCUP OFS</h1>
+        <p class="subtitle">Official Account Dashboard & Leaderboards</p>
+    </header>
+
+    <div class="container">
+        <!-- Panel 1: Buat Akun & Cek Validasi -->
+        <div class="panel">
+            <h2>Account Creation & Verification</h2>
+            <div class="form-group">
+                <label for="username">Register Username</label>
+                <input type="text" id="username" placeholder="Enter desired username..." autocomplete="off">
+            </div>
+            <button onclick="verifyAndCreateAccount()">Verify & Create Account</button>
+            <div id="accountStatus" class="status"></div>
+        </div>
+
+        <!-- Panel 2: Papan Peringkat (Global Leaderboard / Rank) -->
+        <div class="panel">
+            <h2>Global Top Rankings</h2>
+            <ul class="leaderboard-list">
+                <li class="leaderboard-item">
+                    <span>1. <strong>UcupThePro</strong> (Standard)</span>
+                    <span class="rank-badge">SS</span>
+                </li>
+                <li class="leaderboard-item">
+                    <span>2. <strong>DivaMaster</strong> (Diva Style)</span>
+                    <span class="rank-badge">S</span>
+                </li>
+                <li class="leaderboard-item">
+                    <span>3. <strong>OsuFanatic</strong> (Standard)</span>
+                    <span class="rank-badge">A</span>
+                </li>
+                <li class="leaderboard-item">
+                    <span>4. <strong>Player321</strong> (Diva Style)</span>
+                    <span class="rank-badge">B</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function verifyAndCreateAccount() {
+            const usernameInput = document.getElementById('username').value.trim();
+            const statusDiv = document.getElementById('accountStatus');
+
+            // Logika Validasi yang SAMA dengan file main.py (Python) Anda
+            if (usernameInput.length === 0) {
+                statusDiv.className = "status error";
+                statusDiv.innerText = "INVALID: Username cannot be empty!";
+                return;
+            }
+            if (usernameInput.length < 3) {
+                statusDiv.className = "status error";
+                statusDiv.innerText = "INVALID: Username must be at least 3 characters!";
+                return;
+            }
+            if (usernameInput.includes(" ")) {
+                statusDiv.className = "status error";
+                statusDiv.innerText = "INVALID: Username cannot contain spaces!";
+                return;
+            }
+
+            // Jika Berhasil Lolos Validasi
+            statusDiv.className = "status success";
+            statusDiv.innerText = `✓ ACCOUNT VALID: Player "${usernameInput}" successfully registered! Ready for Ucup ofs.`;
+        }
+    </script>
+</body>
+</html>
