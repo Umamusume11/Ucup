@@ -1,0 +1,216 @@
+# ==============================================================================
+# ✍️ Tablet Support & MP4 Video/Audio Beatmap Engine
+# This game reads map.txt and plays the background track from a video.mp4 file.
+# Make sure to install: pip install pygame moviepy
+# ==============================================================================
+
+import pygame
+import random
+import sys
+import math
+import os
+
+# Try to import moviepy for MP4 Audio extraction
+try:
+    from moviepy.editor import AudioFileClip
+except ImportError:
+    print("Warning: moviepy not installed. Run 'pip install moviepy' to support MP4 files.")
+
+# Initialize Pygame and Mixer
+pygame.init()
+pygame.mixer.init()
+
+# Game Setup
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Ucup ofs - MP4 Beatmap Player")
+clock = pygame.time.Clock()
+
+# Colors
+BACKGROUND = (10, 10, 15)
+TAP_COLOR = (255, 105, 180)      # Pink
+SLIDER_COLOR = (0, 255, 200)     # Cyan
+SPINNER_COLOR = (255, 165, 0)    # Orange
+APPROACH_COLOR = (255, 255, 255) # White
+TEXT_COLOR = (255, 255, 255)
+
+# Game Variables
+score = 0
+combo = 0
+font = pygame.font.SysFont("Arial", 24)
+
+# ------------------------------------------------------------------------------
+# MP4 AUDIO EXTRACTION ENGINE
+# ------------------------------------------------------------------------------
+def load_mp4_track(mp4_filename):
+    """ Extracts audio from MP4 and converts it to a playable WAV/MP3 format """
+    if not os.path.exists(mp4_filename):
+        print(f"Error: {mp4_filename} not found! Place your MP4 in the game folder.")
+        return False
+        
+    output_audio = "extracted_audio.wav"
+    
+    # Only convert if the extracted audio doesn't exist yet to save loading time
+    if not os.path.exists(output_audio):
+        print("🎬 Extracting audio from MP4 video container... Please wait.")
+        try:
+            clip = AudioFileClip(mp4_filename)
+            clip.write_audiofile(output_audio, fps=44100, nbytes=2, buffersize=2000, logger=None)
+            clip.close()
+            print("🔊 Audio extracted successfully!")
+        except Exception as e:
+            print(f"Failed to extract MP4 audio: {e}")
+            return False
+            
+    # Play the extracted audio track
+    try:
+        pygame.mixer.music.load(output_audio)
+        pygame.mixer.music.play()
+        return True
+    except:
+        print("Error: Could not play the extracted audio file.")
+        return False
+
+# ------------------------------------------------------------------------------
+# BEATMAP LOADER ENGINE
+# ------------------------------------------------------------------------------
+def load_beatmap(filename):
+    hit_objects = []
+    if not os.path.exists(filename):
+        with open(filename, "w") as f:
+            f.write("500,TAP,200,200\n1500,TAP,400,300\n2500,SLIDER,200,400,600,400\n4500,SPINNER,400,300,2000\n")
+    
+    with open(filename, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(",")
+            time_ms = int(parts[0])
+            obj_type = parts[1]
+            
+            if obj_type == "TAP":
+                hit_objects.append({"time": time_ms, "type": "TAP", "x": int(parts[2]), "y": int(parts[3])})
+            elif obj_type == "SLIDER":
+                hit_objects.append({"time": time_ms, "type": "SLIDER", "x": int(parts[2]), "y": int(parts[3]), "ex": int(parts[4]), "ey": int(parts[5])})
+            elif obj_type == "SPINNER":
+                hit_objects.append({"time": time_ms, "type": "SPINNER", "x": int(parts[2]), "y": int(parts[3]), "duration": int(parts[4])})
+    return hit_objects
+
+# ------------------------------------------------------------------------------
+# GAMEPLAY MECHANICS CLASSES
+# ------------------------------------------------------------------------------
+class ActiveObject:
+    def __init__(self, data):
+        self.data = data
+        self.type = data["type"]
+        self.x = data["x"]
+        self.y = data["y"]
+        self.radius = 40
+        self.approach_scale = 3.0
+        self.alive = True
+        
+        if self.type == "SPINNER":
+            self.spinner_timer = data["duration"]
+            self.approach_scale = 1.0
+
+    def update(self, dt):
+        if self.type == "TAP" or self.type == "SLIDER":
+            self.approach_scale -= 0.05
+            if self.approach_scale <= 1.0:
+                self.alive = False 
+        elif self.type == "SPINNER":
+            self.spinner_timer -= dt
+            if self.spinner_timer <= 0:
+                self.alive = False
+
+    def draw(self, surface):
+        if not self.alive: return
+        
+        if self.type == "TAP":
+            app_rad = int(self.radius * self.approach_scale)
+            pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), app_rad, 2)
+            pygame.draw.circle(surface, TAP_COLOR, (self.x, self.y), self.radius)
+            
+        elif self.type == "SLIDER":
+            ex, ey = self.data["ex"], self.data["ey"]
+            pygame.draw.line(surface, SLIDER_COLOR, (self.x, self.y), (ex, ey), 15)
+            pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), int(self.radius * self.approach_scale), 2)
+            pygame.draw.circle(surface, SLIDER_COLOR, (self.x, self.y), self.radius)
+            pygame.draw.circle(surface, (100, 100, 100), (ex, ey), int(self.radius * 0.8))
+
+        elif self.type == "SPINNER":
+            pygame.draw.circle(surface, SPINNER_COLOR, (self.x, self.y), 180, 4)
+            fill_rad = int(180 * (self.spinner_timer / self.data["duration"]))
+            if fill_rad > 0:
+                pygame.draw.circle(surface, (50, 30, 10), (self.x, self.y), fill_rad)
+            pygame.draw.circle(surface, APPROACH_COLOR, (self.x, self.y), 20)
+
+    def check_click(self, mouse_pos):
+        if self.type == "TAP" or self.type == "SLIDER":
+            dist = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+            if dist <= self.radius and 1.0 <= self.approach_scale <= 1.6:
+                return "HIT"
+        elif self.type == "SPINNER":
+            dist = math.hypot(self.x - mouse_pos[0], self.y - mouse_pos[1])
+            if dist <= 180:
+                return "SPIN_HIT"
+        return "MISS"
+
+# Load data tracks
+beatmap_queue = load_beatmap("map.txt")
+active_play_objects = []
+
+# Try to find and play "video.mp4" in the game folder
+mp4_loaded = load_mp4_track("video.mp4")
+start_ticks = pygame.time.get_ticks()
+
+# Main Loop Execution
+running = True
+while running:
+    screen.fill(BACKGROUND)
+    current_time = pygame.time.get_ticks() - start_ticks
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # Event Catcher Handler
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for obj in active_play_objects:
+                res = obj.check_click(mouse_pos)
+                if res in ["HIT", "SPIN_HIT"]:
+                    score += 300 * (combo + 1)
+                    combo += 1
+                    obj.alive = False
+                    break
+                    
+    # Check beatmap timelines queue to spawn items
+    for obj_data in beatmap_queue[:]:
+        if current_time >= obj_data["time"]:
+            active_play_objects.append(ActiveObject(obj_data))
+            beatmap_queue.remove(obj_data)
+
+    # Update state array frames
+    for obj in active_play_objects[:]:
+        obj.update(16) 
+        if not obj.alive:
+            active_play_objects.remove(obj)
+            if obj.approach_scale <= 1.0: combo = 0 
+        else:
+            obj.draw(screen)
+
+    # UI Panel Layout overlays
+    screen.blit(font.render(f"Score: {score}", True, TEXT_COLOR), (20, 20))
+    screen.blit(font.render(f"Combo: {combo}x", True, TEXT_COLOR), (20, 50))
+    screen.blit(font.render(f"Track Time: {current_time // 1000}s", True, TEXT_COLOR), (20, 80))
+    
+    if not mp4_loaded:
+        screen.blit(font.render("⚠️ video.mp4 missing! Play quiet mode.", True, (255, 50, 50)), (20, 110))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
