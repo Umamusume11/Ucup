@@ -228,5 +228,346 @@
             statusDiv.innerText = `✓ ACCOUNT VALID: Player "${usernameInput}" successfully registered! Ready for Ucup ofs.`;
         }
     </script>
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ucup ofs - Official Website</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --panel-bg: #150a19;
+            --pink-osu: #ff69b4;
+            --cyan-diva: #00e6c8;
+            --text-color: #ffffff;
+            --error-color: #ff3232;
+            --success-color: #32ff32;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: var(--pink-osu);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            margin: 30px auto;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 2px solid #251530;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--cyan-diva);
+            border-bottom: 1px solid #351a45;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            background-color: #1a1a26;
+            border: 2px solid #351a45;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--cyan-diva);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--pink-osu);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .status.error {
+            background-color: rgba(255, 50, 50, 0.15);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+            display: block;
+        }
+
+        .status.success {
+            background-color: rgba(50, 255, 50, 0.15);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+            display: block;
+        }
+
+        /* --- STYLED LEADERBOARD --- */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        .leaderboard-table th {
+            background-color: #251230;
+            color: var(--pink-osu);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .leaderboard-table tr {
+            border-bottom: 1px solid #251530;
+            transition: 0.2s;
+        }
+
+        .leaderboard-table tr:hover {
+            background-color: rgba(255, 105, 180, 0.05);
+        }
+
+        .rank-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .badge-ss { background-color: #gold; color: #fff34f; text-shadow: 0 0 5px #fff34f; }
+        .badge-s { color: var(--pink-osu); }
+        .badge-a { color: var(--cyan-diva); }
+        .badge-b { color: #ffffff; }
+
+        /* --- BEATMAP DOWNLOAD SECTION --- */
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a0f24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #351a45;
+        }
+
+        .song-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .song-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .download-btn {
+            background-color: transparent;
+            border: 2px solid var(--cyan-diva);
+            color: var(--cyan-diva);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+            text-align: center;
+            width: auto;
+        }
+
+        .download-btn:hover {
+            background-color: var(--cyan-diva);
+            color: var(--bg-color);
+            transform: translateY(-2px);
+        }
+
+        /* --- TOP DOWNLOAD LINK BUTTON --- */
+        .top-download-box {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .web-download-link {
+            display: inline-block;
+            color: var(--pink-osu);
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 1.1rem;
+            border: 2px dashed var(--pink-osu);
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .web-download-link:hover {
+            background-color: var(--pink-osu);
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>UCUP OFS</h1>
+        <p class="subtitle">Official Account Dashboard & Leaderboards</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Web Download Here Link (English) -->
+        <div class="top-download-box">
+            <a href="https://github.com" target="_blank" class="web-download-link">
+                ➔ Web download here (Get Game .EXE)
+            </a>
+        </div>
+
+        <!-- Panel 1: Buat Akun & Cek Validasi -->
+        <div class="panel">
+            <h2>Account Creation & Verification</h2>
+            <div class="form-group">
+                <label for="username">Register Username</label>
+                <input type="text" id="username" placeholder="Enter desired username..." autocomplete="off">
+            </div>
+            <button onclick="verifyAndCreateAccount()">Verify & Create Account</button>
+            <div id="accountStatus" class="status"></div>
+        </div>
+
+        <!-- Panel 2: Download Lagu (Beatmaps) -->
+        <div class="panel">
+            <h2>Download Songs (Beatmaps)</h2>
+            <div class="song-list">
+                <div class="song-item">
+                    <div class="song-info">
+                        <h3>Ucup Theme Song - Remixed</h3>
+                        <p>BPM: 180 | Difficulty: ★★★★☆ (Hard)</p>
+                    </div>
+                    <a href="#" class="download-btn">Download Map</a>
+                </div>
+                <div class="song-item">
+                    <div class="song-info">
+                        <h3>Diva Cyber Track - Electronic</h3>
+                        <p>BPM: 145 | Difficulty: ★★★☆☆ (Normal)</p>
+                    </div>
+                    <a href="#" class="download-btn">Download Map</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Papan Peringkat (Global Leaderboard / Rank) -->
+        <div class="panel">
+            <h2>Global Top Rankings</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player Name</th>
+                        <th>Game Mode</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>#1</strong></td>
+                        <td>UcupThePro</td>
+                        <td>Standard</td>
+                        <td><span class="rank-badge badge-ss">SS</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>#2</strong></td>
+                        <td>DivaMaster</td>
+                        <td>Diva Style</td>
+                        <td><span class="rank-badge badge-s">S</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>#3</strong></td>
+                        <td>OsuFanatic</td>
+                        <td>Standard</td>
+                        <td><span class="rank-badge badge-a">A</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>#4</strong></td>
+                        <td>Player321</td>
+                        <td>Diva Style</td>
+
 </body>
 </html>
